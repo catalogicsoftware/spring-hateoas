@@ -1,0 +1,108 @@
+{
+  "_embedded": [
+    {
+      "employees": [
+        {
+          "name": "Frodo Baggins",
+          "role": "ring bearer",
+          "_links": {
+            "self": {
+              "href": "http://localhost/employees/0"
+            },
+            "employees": {
+              "href": "http://localhost/employees"
+            }
+          },
+          "_templates": {
+            "default": {
+              "method": "put",
+              "properties": [
+                {
+                  "name": "name",
+                  "required": true
+                },
+                {
+                  "name": "role",
+                  "required": true
+                }
+              ]
+            },
+            "partiallyUpdateEmployee": {
+              "method": "patch",
+              "properties": [
+                {
+                  "name": "name",
+                  "required": false
+                },
+                {
+                  "name": "role",
+                  "required": false
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Bilbo Baggins",
+          "role": "burglar",
+          "_links": {
+            "self": {
+              "href": "http://localhost/employees/1"
+            },
+            "employees": {
+              "href": "http://localhost/employees"
+            }
+          },
+          "_templates": {
+            "default": {
+              "method": "put",
+              "properties": [
+                {
+                  "name": "name",
+                  "required": true
+                },
+                {
+                  "name": "role",
+                  "required": true
+                }
+              ]
+            },
+            "partiallyUpdateEmployee": {
+              "method": "patch",
+              "properties": [
+                {
+                  "name": "name",
+                  "required": false
+                },
+                {
+                  "name": "role",
+                  "required": false
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "_links": {
+    "self": {
+      "href": "http://localhost/employees"
+    }
+  },
+  "_templates": {
+    "default": {
+      "method": "post",
+      "properties": [
+        {
+          "name": "name",
+          "required": true
+        },
+        {
+          "name": "role",
+          "required": true
+        }
+      ]
+    }
+  }
+}

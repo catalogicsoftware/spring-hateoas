@@ -55,6 +55,8 @@ import org.springframework.hateoas.core.EvoInflectorRelProvider;
 import org.springframework.hateoas.hal.CurieProvider;
 import org.springframework.hateoas.hal.HalLinkDiscoverer;
 import org.springframework.hateoas.hal.Jackson2HalModule;
+import org.springframework.hateoas.hal.forms.HalFormsLinkDiscoverer;
+import org.springframework.hateoas.hal.forms.Jackson2HalFormsModule;
 import org.springframework.hateoas.mvc.TypeConstrainedMappingJackson2HttpMessageConverter;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.Jackson2ObjectMapperFactoryBean;
@@ -81,6 +83,7 @@ class HypermediaSupportBeanDefinitionRegistrar implements ImportBeanDefinitionRe
 	private static final String DELEGATING_REL_PROVIDER_BEAN_NAME = "_relProvider";
 	private static final String LINK_DISCOVERER_REGISTRY_BEAN_NAME = "_linkDiscovererRegistry";
 	private static final String HAL_OBJECT_MAPPER_BEAN_NAME = "_halObjectMapper";
+	private static final String HAL_FORMS_OBJECT_MAPPER_BEAN_NAME = "_halFormsObjectMapper";
 	private static final String MESSAGE_SOURCE_BEAN_NAME = "linkRelationMessageSource";
 
 	private static final boolean JACKSON2_PRESENT = ClassUtils.isPresent("com.fasterxml.jackson.databind.ObjectMapper",
@@ -113,18 +116,11 @@ class HypermediaSupportBeanDefinitionRegistrar implements ImportBeanDefinitionRe
 		}
 
 		if (types.contains(HypermediaType.HAL)) {
+			registerHypermediaComponents(metadata, registry, HAL_OBJECT_MAPPER_BEAN_NAME);
+		}
 
-			if (JACKSON2_PRESENT) {
-
-				BeanDefinitionBuilder halQueryMapperBuilder = rootBeanDefinition(ObjectMapper.class);
-				registerSourcedBeanDefinition(halQueryMapperBuilder, metadata, registry, HAL_OBJECT_MAPPER_BEAN_NAME);
-
-				BeanDefinitionBuilder customizerBeanDefinition = rootBeanDefinition(DefaultObjectMapperCustomizer.class);
-				registerSourcedBeanDefinition(customizerBeanDefinition, metadata, registry);
-
-				BeanDefinitionBuilder builder = rootBeanDefinition(Jackson2ModuleRegisteringBeanPostProcessor.class);
-				registerSourcedBeanDefinition(builder, metadata, registry);
-			}
+		if (types.contains(HypermediaType.HAL_FORMS)) {
+			registerHypermediaComponents(metadata, registry, HAL_FORMS_OBJECT_MAPPER_BEAN_NAME);
 		}
 
 		if (!types.isEmpty()) {
@@ -141,6 +137,21 @@ class HypermediaSupportBeanDefinitionRegistrar implements ImportBeanDefinitionRe
 		}
 
 		registerRelProviderPluginRegistryAndDelegate(registry);
+	}
+
+	private static void registerHypermediaComponents(AnnotationMetadata metadata, BeanDefinitionRegistry registry, String objectMapperBeanName) {
+
+		if (JACKSON2_PRESENT) {
+
+			BeanDefinitionBuilder queryMapperBuilder = rootBeanDefinition(ObjectMapper.class);
+			registerSourcedBeanDefinition(queryMapperBuilder, metadata, registry, objectMapperBeanName);
+
+			BeanDefinitionBuilder customizerBeanDefinition = rootBeanDefinition(DefaultObjectMapperCustomizer.class);
+			registerSourcedBeanDefinition(customizerBeanDefinition, metadata, registry);
+
+			BeanDefinitionBuilder builder = rootBeanDefinition(Jackson2ModuleRegisteringBeanPostProcessor.class);
+			registerSourcedBeanDefinition(builder, metadata, registry);
+		}
 	}
 
 	/**
@@ -187,6 +198,9 @@ class HypermediaSupportBeanDefinitionRegistrar implements ImportBeanDefinitionRe
 		switch (type) {
 			case HAL:
 				definition = new RootBeanDefinition(HalLinkDiscoverer.class);
+				break;
+			case HAL_FORMS:
+				definition = new RootBeanDefinition(HalFormsLinkDiscoverer.class);
 				break;
 			default:
 				throw new IllegalStateException(String.format("Unsupported hypermedia type %s!", type));
@@ -283,22 +297,45 @@ class HypermediaSupportBeanDefinitionRegistrar implements ImportBeanDefinitionRe
 
 			CurieProvider curieProvider = getCurieProvider(beanFactory);
 			RelProvider relProvider = beanFactory.getBean(DELEGATING_REL_PROVIDER_BEAN_NAME, RelProvider.class);
-			ObjectMapper halObjectMapper = beanFactory.getBean(HAL_OBJECT_MAPPER_BEAN_NAME, ObjectMapper.class);
-			MessageSourceAccessor linkRelationMessageSource = beanFactory.getBean(MESSAGE_SOURCE_BEAN_NAME,
-					MessageSourceAccessor.class);
-
-			halObjectMapper.registerModule(new Jackson2HalModule());
-			halObjectMapper.setHandlerInstantiator(new Jackson2HalModule.HalHandlerInstantiator(relProvider, curieProvider,
-					linkRelationMessageSource, beanFactory));
-
-			MappingJackson2HttpMessageConverter halConverter = new TypeConstrainedMappingJackson2HttpMessageConverter(
-					ResourceSupport.class);
-			halConverter.setSupportedMediaTypes(Arrays.asList(HAL_JSON));
-			halConverter.setObjectMapper(halObjectMapper);
 
 			List<HttpMessageConverter<?>> result = new ArrayList<HttpMessageConverter<?>>(converters.size());
-			result.add(halConverter);
+
+			if (beanFactory.containsBean(HAL_OBJECT_MAPPER_BEAN_NAME)) {
+
+				ObjectMapper halObjectMapper = beanFactory.getBean(HAL_OBJECT_MAPPER_BEAN_NAME, ObjectMapper.class);
+				MessageSourceAccessor linkRelationMessageSource = beanFactory.getBean(MESSAGE_SOURCE_BEAN_NAME,
+					MessageSourceAccessor.class);
+
+				halObjectMapper.registerModule(new Jackson2HalModule());
+				halObjectMapper.setHandlerInstantiator(new Jackson2HalModule.HalHandlerInstantiator(relProvider, curieProvider,
+					linkRelationMessageSource, beanFactory));
+
+				MappingJackson2HttpMessageConverter halConverter = new TypeConstrainedMappingJackson2HttpMessageConverter(
+					ResourceSupport.class);
+				halConverter.setSupportedMediaTypes(Arrays.asList(HAL_JSON));
+				halConverter.setObjectMapper(halObjectMapper);
+				result.add(halConverter);
+			}
+
+			if (beanFactory.containsBean(HAL_FORMS_OBJECT_MAPPER_BEAN_NAME)) {
+
+				ObjectMapper halFormsObjectMapper = beanFactory.getBean(HAL_FORMS_OBJECT_MAPPER_BEAN_NAME, ObjectMapper.class);
+				MessageSourceAccessor linkRelationMessageSource = beanFactory.getBean(MESSAGE_SOURCE_BEAN_NAME,
+					MessageSourceAccessor.class);
+
+				halFormsObjectMapper.registerModule(new Jackson2HalFormsModule());
+				halFormsObjectMapper.setHandlerInstantiator(new Jackson2HalFormsModule.HalFormsHandlerInstantiator(relProvider, curieProvider,
+					linkRelationMessageSource, true));
+
+				MappingJackson2HttpMessageConverter halFormsConverter = new TypeConstrainedMappingJackson2HttpMessageConverter(
+					ResourceSupport.class);
+				halFormsConverter.setSupportedMediaTypes(Arrays.asList(HAL_FORMS_JSON));
+				halFormsConverter.setObjectMapper(halFormsObjectMapper);
+				result.add(halFormsConverter);
+			}
+
 			result.addAll(converters);
+
 			return result;
 		}
 
@@ -327,14 +364,13 @@ class HypermediaSupportBeanDefinitionRegistrar implements ImportBeanDefinitionRe
 		@Override
 		public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
 
-			if (!HAL_OBJECT_MAPPER_BEAN_NAME.equals(beanName)) {
-				return bean;
+			if (HAL_OBJECT_MAPPER_BEAN_NAME.equals(beanName) || HAL_FORMS_OBJECT_MAPPER_BEAN_NAME.equals(beanName)) {
+				ObjectMapper mapper = (ObjectMapper) bean;
+				mapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+				return mapper;
 			}
 
-			ObjectMapper mapper = (ObjectMapper) bean;
-			mapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
-
-			return mapper;
+			return bean;
 		}
 
 		/* 

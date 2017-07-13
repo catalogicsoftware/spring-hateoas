@@ -47,6 +47,7 @@ import org.springframework.util.Assert;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ValueConstants;
 import org.springframework.web.util.UriComponents;
@@ -136,6 +137,8 @@ public class ControllerLinkBuilderFactory implements MethodLinkBuilderFactory<Co
 		Method method = invocation.getMethod();
 
 		String mapping = DISCOVERER.getMapping(invocation.getTargetType(), method);
+		String[] httpMethods = DISCOVERER.getRequestType(invocation.getTargetType(), method);
+
 		UriComponentsBuilder builder = ControllerLinkBuilder.getBuilder().path(mapping);
 
 		UriTemplate template = new UriTemplate(mapping);
@@ -183,7 +186,16 @@ public class ControllerLinkBuilderFactory implements MethodLinkBuilderFactory<Co
 			variables = variables.concat(variable);
 		}
 
-		return new ControllerLinkBuilder(components, variables);
+		ControllerLinkBuilder controllerLinkBuilder = new ControllerLinkBuilder(components, variables);
+
+		for (String requestMethod : httpMethods) {
+			if (requestMethod != RequestMethod.GET.toString()) {
+				controllerLinkBuilder.withAffordance(
+					new SpringMvcAffordance(invocation.getMethod(), invocation.getTargetType(), RequestMethod.valueOf(requestMethod)));
+			}
+		}
+
+		return controllerLinkBuilder;
 	}
 
 	/* 

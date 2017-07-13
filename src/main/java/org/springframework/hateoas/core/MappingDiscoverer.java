@@ -49,4 +49,6 @@ public interface MappingDiscoverer {
 	 * @return the method mapping including the type-level one or {@literal null} if neither of them present.
 	 */
 	String getMapping(Class<?> type, Method method);
+
+	String[] getRequestType(Class<?> type, Method method);
 }

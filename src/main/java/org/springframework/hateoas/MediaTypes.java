@@ -34,4 +34,12 @@ public class MediaTypes {
 	 * Public constant media type for {@code application/hal+json}.
 	 */
 	public static final MediaType HAL_JSON = MediaType.valueOf(HAL_JSON_VALUE);
+
+	/**
+	 * Public constant media type for {@code application/prs.hal-forms+json}.
+	 */
+	public static final String HAL_FORMS_JSON_VALUE = "application/prs.hal-forms+json";
+
+	public static final MediaType HAL_FORMS_JSON = MediaType.parseMediaType(HAL_FORMS_JSON_VALUE);
+
 }

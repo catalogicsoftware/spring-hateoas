@@ -24,6 +24,8 @@ import java.io.ObjectOutputStream;
 import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.junit.Test;
 
+import org.springframework.hateoas.mvc.SpringMvcAffordance;
+
 /**
  * Unit tests for {@link Link}.
  * 
@@ -190,5 +192,23 @@ public class LinkUnitTest {
 
 		assertThat(Link.valueOf("<http://localhost>; rel=\"http://acme.com/rels/foo-bar\"").getRel(),
 				is("http://acme.com/rels/foo-bar"));
+	}
+
+	@Test
+	public void linkWithAffordancesShouldWorkProperly() {
+
+		Link originalLink = new Link("/foo");
+		Link linkWithAffordance = originalLink.withAffordance(new SpringMvcAffordance());
+		Link linkWithTwoAffordances = linkWithAffordance.withAffordance(new SpringMvcAffordance());
+
+		assertThat(originalLink.getAffordances().size(), is(0));
+		assertThat(linkWithAffordance.getAffordances().size(), is(1));
+		assertThat(linkWithTwoAffordances.getAffordances().size(), is(2));
+
+		assertThat(originalLink.hashCode(), not(equalTo(linkWithAffordance.hashCode())));
+		assertThat(originalLink, not(equalTo(linkWithAffordance)));
+
+		assertThat(linkWithAffordance.hashCode(), not(equalTo(linkWithTwoAffordances.hashCode())));
+		assertThat(linkWithAffordance, not(equalTo(linkWithTwoAffordances)));
 	}
 }

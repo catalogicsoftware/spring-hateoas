@@ -41,6 +41,7 @@ import org.springframework.hateoas.config.HypermediaSupportBeanDefinitionRegistr
 import org.springframework.hateoas.core.DelegatingEntityLinks;
 import org.springframework.hateoas.core.DelegatingRelProvider;
 import org.springframework.hateoas.hal.HalLinkDiscoverer;
+import org.springframework.hateoas.hal.forms.HalFormsLinkDiscoverer;
 import org.springframework.hateoas.mvc.TypeConstrainedMappingJackson2HttpMessageConverter;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
@@ -69,6 +70,11 @@ public class EnableHypermediaSupportIntegrationTest {
 	}
 
 	@Test
+	public void bootstrapHalFormsConfiguration() {
+		assertHalFormsSetupForConfigClass(HalFormsConfig.class);
+	}
+
+	@Test
 	public void registersLinkDiscoverers() {
 
 		ApplicationContext context = new AnnotationConfigApplicationContext(HalConfig.class);
@@ -80,8 +86,24 @@ public class EnableHypermediaSupportIntegrationTest {
 	}
 
 	@Test
+	public void registersHalFormsLinkDiscoverers() {
+
+		ApplicationContext context = new AnnotationConfigApplicationContext(HalFormsConfig.class);
+		LinkDiscoverers discoverers = context.getBean(LinkDiscoverers.class);
+
+		assertThat(discoverers, is(notNullValue()));
+		assertThat(discoverers.getLinkDiscovererFor(MediaTypes.HAL_FORMS_JSON), is(instanceOf(HalFormsLinkDiscoverer.class)));
+		assertRelProvidersSetUp(context);
+	}
+
+	@Test
 	public void bootstrapsHalConfigurationForSubclass() {
 		assertHalSetupForConfigClass(ExtendedHalConfig.class);
+	}
+
+	@Test
+	public void bootstrapsHalFormsConfigurationForSubclass() {
+		assertHalFormsSetupForConfigClass(ExtendedHalFormsConfig.class);
 	}
 
 	/**
@@ -120,6 +142,39 @@ public class EnableHypermediaSupportIntegrationTest {
 		assertThat(found, is(true));
 	}
 
+	@Test
+	@SuppressWarnings("unchecked")
+	public void halFormsSetupIsAppliedToAllTransitiveComponentsInRequestMappingHandlerAdapter() {
+
+		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(HalFormsConfig.class);
+
+		Jackson2ModuleRegisteringBeanPostProcessor postProcessor = new HypermediaSupportBeanDefinitionRegistrar.Jackson2ModuleRegisteringBeanPostProcessor();
+		postProcessor.setBeanFactory(context.getAutowireCapableBeanFactory());
+
+		RequestMappingHandlerAdapter adapter = context.getBean(RequestMappingHandlerAdapter.class);
+
+		assertThat(adapter.getMessageConverters().get(0).getSupportedMediaTypes(), hasItem(MediaTypes.HAL_FORMS_JSON));
+
+		boolean found = false;
+
+		for (HandlerMethodArgumentResolver resolver : getResolvers(adapter)) {
+
+			if (resolver instanceof AbstractMessageConverterMethodArgumentResolver) {
+
+				found = true;
+
+				AbstractMessageConverterMethodArgumentResolver processor = (AbstractMessageConverterMethodArgumentResolver) resolver;
+				List<HttpMessageConverter<?>> converters = (List<HttpMessageConverter<?>>) ReflectionTestUtils
+					.getField(processor, "messageConverters");
+
+				assertThat(converters.get(0), is(instanceOf(TypeConstrainedMappingJackson2HttpMessageConverter.class)));
+				assertThat(converters.get(0).getSupportedMediaTypes(), hasItem(MediaTypes.HAL_FORMS_JSON));
+			}
+		}
+
+		assertThat(found, is(true));
+	}
+
 	/**
 	 * @see #293
 	 */
@@ -133,6 +188,16 @@ public class EnableHypermediaSupportIntegrationTest {
 		context.close();
 	}
 
+	@Test
+	public void registersHalFormsHttpMessageConvertersForRestTemplate() {
+
+		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(HalFormsConfig.class);
+		RestTemplate template = context.getBean(RestTemplate.class);
+
+		assertThat(template.getMessageConverters().get(0).getSupportedMediaTypes(), hasItem(MediaTypes.HAL_FORMS_JSON));
+		context.close();
+	}
+
 	/**
 	 * @see #341
 	 */
@@ -141,6 +206,16 @@ public class EnableHypermediaSupportIntegrationTest {
 
 		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(HalConfig.class);
 		ObjectMapper mapper = context.getBean("_halObjectMapper", ObjectMapper.class);
+
+		assertThat(mapper.isEnabled(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES), is(false));
+		context.close();
+	}
+
+	@Test
+	public void configuresDefaultObjectMapperForHalFormsToIgnoreUnknownProperties() {
+
+		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(HalFormsConfig.class);
+		ObjectMapper mapper = context.getBean("_halFormsObjectMapper", ObjectMapper.class);
 
 		assertThat(mapper.isEnabled(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES), is(false));
 		context.close();
@@ -169,6 +244,18 @@ public class EnableHypermediaSupportIntegrationTest {
 		RequestMappingHandlerAdapter rmha = context.getBean(RequestMappingHandlerAdapter.class);
 		assertThat(rmha.getMessageConverters(),
 				Matchers.<HttpMessageConverter<?>>hasItems(instanceOf(MappingJackson2HttpMessageConverter.class)));
+	}
+
+	private static void assertHalFormsSetupForConfigClass(Class<?> configClass) {
+
+		ApplicationContext context = new AnnotationConfigApplicationContext(configClass);
+		assertEntityLinksSetUp(context);
+		assertThat(context.getBean(LinkDiscoverer.class), is(instanceOf(HalFormsLinkDiscoverer.class)));
+		assertThat(context.getBean(ObjectMapper.class), is(notNullValue()));
+
+		RequestMappingHandlerAdapter rmha = context.getBean(RequestMappingHandlerAdapter.class);
+		assertThat(rmha.getMessageConverters(),
+			Matchers.<HttpMessageConverter<?>>hasItems(instanceOf(MappingJackson2HttpMessageConverter.class)));
 	}
 
 	/**
@@ -222,6 +309,37 @@ public class EnableHypermediaSupportIntegrationTest {
 	@Configuration
 	@EnableHypermediaSupport(type = HypermediaType.HAL)
 	static class DelegateConfig {
+
+	}
+
+	@Configuration
+	@Import(DelegateHalFormsHypermediaConfig.class)
+	static class HalFormsConfig {
+
+		static int numberOfMessageConverters = 0;
+
+		@Bean
+		public RequestMappingHandlerAdapter rmh() {
+			RequestMappingHandlerAdapter adapter = new RequestMappingHandlerAdapter();
+			numberOfMessageConverters = adapter.getMessageConverters().size();
+			return adapter;
+		}
+
+		@Bean
+		public RestTemplate restTemplate() {
+			return new RestTemplate();
+		}
+
+	}
+
+	@Configuration
+	static class ExtendedHalFormsConfig extends HalFormsConfig {
+
+	}
+
+	@Configuration
+	@EnableHypermediaSupport(type = HypermediaType.HAL_FORMS)
+	static class DelegateHalFormsHypermediaConfig {
 
 	}
 }

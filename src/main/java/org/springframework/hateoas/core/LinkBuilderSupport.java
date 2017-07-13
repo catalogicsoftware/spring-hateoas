@@ -19,7 +19,10 @@ import static org.springframework.hateoas.core.EncodingUtils.*;
 import static org.springframework.web.util.UriComponentsBuilder.*;
 
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
 
+import org.springframework.hateoas.Affordance;
 import org.springframework.hateoas.Identifiable;
 import org.springframework.hateoas.Link;
 import org.springframework.hateoas.LinkBuilder;
@@ -40,6 +43,8 @@ public abstract class LinkBuilderSupport<T extends LinkBuilder> implements LinkB
 
 	private final UriComponents uriComponents;
 
+	private final List<Affordance> affordances;
+
 	/**
 	 * Creates a new {@link LinkBuilderSupport} using the given {@link UriComponentsBuilder}.
 	 * 
@@ -49,6 +54,7 @@ public abstract class LinkBuilderSupport<T extends LinkBuilder> implements LinkB
 
 		Assert.notNull(builder, "UriComponentsBuilder must not be null!");
 		this.uriComponents = builder.build();
+		this.affordances = new ArrayList<Affordance>();
 	}
 
 	/**
@@ -60,6 +66,7 @@ public abstract class LinkBuilderSupport<T extends LinkBuilder> implements LinkB
 
 		Assert.notNull(uriComponents, "UriComponents must not be null!");
 		this.uriComponents = uriComponents;
+		this.affordances = new ArrayList<Affordance>();
 	}
 
 	/*
@@ -130,12 +137,25 @@ public abstract class LinkBuilderSupport<T extends LinkBuilder> implements LinkB
 		return uriComponents.encode().toUri().normalize();
 	}
 
+	public LinkBuilderSupport withAffordance(Affordance affordance) {
+
+		this.affordances.add(affordance);
+
+		return this;
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * @see org.springframework.hateoas.LinkBuilder#withRel(java.lang.String)
 	 */
 	public Link withRel(String rel) {
-		return new Link(toString(), rel);
+		Link link = new Link(toString(), rel);
+
+		for (Affordance affordance : this.affordances) {
+			link = link.withAffordance(affordance);
+		}
+
+		return link;
 	}
 
 	/*
@@ -147,9 +167,9 @@ public abstract class LinkBuilderSupport<T extends LinkBuilder> implements LinkB
 	}
 
 	/*
-	 * (non-Javadoc)
-	 * @see java.lang.Object#toString()
-	 */
+		 * (non-Javadoc)
+		 * @see java.lang.Object#toString()
+		 */
 	@Override
 	public String toString() {
 		return uriComponents.toUriString();

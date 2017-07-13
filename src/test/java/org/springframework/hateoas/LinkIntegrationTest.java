@@ -18,6 +18,10 @@ package org.springframework.hateoas;
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
 
+import java.util.Collection;
+import java.util.Collections;
+
+import org.hamcrest.CoreMatchers;
 import org.junit.Test;
 
 /**
@@ -46,5 +50,6 @@ public class LinkIntegrationTest extends AbstractJackson2MarshallingIntegrationT
 		Link result = read(REFERENCE, Link.class);
 		assertThat(result.getHref(), is("location"));
 		assertThat(result.getRel(), is("something"));
+		assertThat(result.getAffordances().size(), is(0));
 	}
 }

@@ -139,6 +139,10 @@ public class Jackson2HalModule extends SimpleModule {
 			this.accessor = accessor;
 		}
 
+		public HalLinkListSerializer() {
+			this(null, null, null);
+		}
+
 		/*
 		 * (non-Javadoc)
 		 * @see com.fasterxml.jackson.databind.ser.std.StdSerializer#serialize(java.lang.Object, com.fasterxml.jackson.core.JsonGenerator, com.fasterxml.jackson.databind.SerializerProvider)
@@ -872,7 +876,7 @@ public class Jackson2HalModule extends SimpleModule {
 	 *
 	 * @author Oliver Gierke
 	 */
-	private static class EmbeddedMapper {
+	public static class EmbeddedMapper {
 
 		private RelProvider relProvider;
 		private CurieProvider curieProvider;
