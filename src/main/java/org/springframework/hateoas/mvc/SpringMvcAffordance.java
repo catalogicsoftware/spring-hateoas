@@ -47,6 +47,8 @@ public class SpringMvcAffordance implements Affordance {
 	 */
 	private final RequestMethod requestMethod;
 
+	private final String uri;
+
 	/**
 	 * Handle on the Spring MVC controller {@link Method}.
 	 */
@@ -69,6 +71,7 @@ public class SpringMvcAffordance implements Affordance {
 
 		this.required = false;
 		this.method = null;
+		this.uri = "";
 		this.requestMethod = RequestMethod.POST;
 		this.properties = null;
 	}
@@ -76,10 +79,11 @@ public class SpringMvcAffordance implements Affordance {
 	/**
 	 * Construct a Spring MVC-based {@link Affordance} based on Spring MVC controller method and {@link RequestMethod}.
 	 */
-	public SpringMvcAffordance(Method method, Class<?> targetType, RequestMethod requestMethod) {
+	public SpringMvcAffordance(Method method, String uri, Class<?> targetType, RequestMethod requestMethod) {
 
 		this.requestMethod = requestMethod;
 		this.method = method;
+		this.uri = uri;
 		this.required = determineRequired(requestMethod);
 		this.properties = new TreeMap<String, Class<?>>();
 
@@ -145,13 +149,18 @@ public class SpringMvcAffordance implements Affordance {
 	}
 
 	@Override
+	public String getVerb() {
+		return this.requestMethod.toString();
+	}
+
+	@Override
 	public String getMethodName() {
 		return this.method.getName();
 	}
 
 	@Override
-	public String getVerb() {
-		return this.requestMethod.toString();
+	public String getUri() {
+		return this.uri;
 	}
 
 	/**

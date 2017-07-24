@@ -191,7 +191,7 @@ public class ControllerLinkBuilderFactory implements MethodLinkBuilderFactory<Co
 		for (String requestMethod : httpMethods) {
 			if (requestMethod != RequestMethod.GET.toString()) {
 				controllerLinkBuilder.withAffordance(
-					new SpringMvcAffordance(invocation.getMethod(), invocation.getTargetType(), RequestMethod.valueOf(requestMethod)));
+					new SpringMvcAffordance(invocation.getMethod(), components.getPath(), invocation.getTargetType(), RequestMethod.valueOf(requestMethod)));
 			}
 		}
 

@@ -19,6 +19,8 @@ import java.beans.IntrospectionException;
 import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
 import java.lang.reflect.InvocationTargetException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -68,6 +70,9 @@ final class HalFormsUtils {
 
 		if (resources.hasLink(Link.REL_SELF)) {
 			for (Affordance affordance : resources.getLink(Link.REL_SELF).getAffordances()) {
+
+				validate(resources, affordance);
+
 				Template template = new Template();
 				template.setHttpMethod(HttpMethod.valueOf(affordance.getVerb()));
 
@@ -117,6 +122,9 @@ final class HalFormsUtils {
 
 		if (resource.hasLink(Link.REL_SELF)) {
 			for (Affordance affordance : resource.getLink(Link.REL_SELF).getAffordances()) {
+
+				validate(resource, affordance);
+
 				Template template = new Template();
 				template.setHttpMethod(HttpMethod.valueOf(affordance.getVerb()));
 
@@ -175,6 +183,27 @@ final class HalFormsUtils {
 			.links(rs.getLinks())
 			.templates(new HashMap<String, Template>())
 			.build();
+	}
+
+	/**
+	 * Verify that the resource's self link and the affordance's URI have the same relative path.
+	 * 
+	 * @param resource
+	 * @param affordance
+	 */
+	private static void validate(ResourceSupport resource, Affordance affordance) {
+
+		try {
+			Link selfLink = resource.getLink(Link.REL_SELF);
+
+			URI uri = new URI(selfLink.expand().getHref());
+
+			if (!uri.getPath().equals(affordance.getUri())) {
+				throw new IllegalStateException("Affordance's URI " + affordance.getUri() + " doesn't match self link " + uri.getPath() + " as expected in HAL-FORMS");
+			}
+		} catch (URISyntaxException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	/**

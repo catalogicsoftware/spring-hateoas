@@ -33,4 +33,6 @@ public interface Affordance {
 	boolean isRequired();
 
 	Map<String, Class<?>> getProperties();
+
+	String getUri();
 }

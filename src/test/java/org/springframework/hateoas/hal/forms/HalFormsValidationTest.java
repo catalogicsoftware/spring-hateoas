@@ -15,14 +15,15 @@
  */
 package org.springframework.hateoas.hal.forms;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
+import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.collection.IsCollectionWithSize.*;
+import static org.junit.Assert.assertThat;
 import static org.springframework.hateoas.mvc.ControllerLinkBuilder.*;
-import static org.springframework.hateoas.mvc.SpringMvcAffordance.byLink;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
+import static org.springframework.hateoas.mvc.SpringMvcAffordance.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup;
+import static org.springframework.test.web.servlet.setup.MockMvcBuilders.*;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -62,12 +63,15 @@ import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
+ * Test that when an {@link org.springframework.hateoas.Affordance} is included that does NOT match the self link,
+ * an exception is thrown.
+ * 
  * @author Greg Turnquist
  */
 @RunWith(SpringRunner.class)
 @WebAppConfiguration
 @ContextConfiguration
-public class HalFormsWebMvcTest {
+public class HalFormsValidationTest {
 
 	@Autowired
 	WebApplicationContext context;
@@ -86,41 +90,34 @@ public class HalFormsWebMvcTest {
 	@Test
 	public void singleEmployee() throws Exception {
 
-		this.mockMvc.perform(get("/employees/0").accept(MediaTypes.HAL_FORMS_JSON))
+		Exception exception = this.mockMvc.perform(get("/employees/0").accept(MediaTypes.HAL_FORMS_JSON))
 			.andDo(print())
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.name", is("Frodo Baggins")))
-			.andExpect(jsonPath("$.role", is("ring bearer")))
-			.andExpect(jsonPath("$._links.*", hasSize(2)))
-			.andExpect(jsonPath("$._links['self'].href", is("http://localhost/employees/0")))
-			.andExpect(jsonPath("$._links['employees'].href", is("http://localhost/employees")))
-			.andExpect(jsonPath("$._templates.*", hasSize(2)))
-			.andExpect(jsonPath("$._templates['default'].properties[0].name", is("name")))
-			.andExpect(jsonPath("$._templates['default'].properties[0].required", is(true)))
-			.andExpect(jsonPath("$._templates['default'].properties[1].name", is("role")))
-			.andExpect(jsonPath("$._templates['default'].properties[1].required", is(true)))
-			.andExpect(jsonPath("$._templates['partiallyUpdateEmployee'].properties[0].name", is("name")))
-			.andExpect(jsonPath("$._templates['partiallyUpdateEmployee'].properties[0].required", is(false)))
-			.andExpect(jsonPath("$._templates['partiallyUpdateEmployee'].properties[1].name", is("role")))
-			.andExpect(jsonPath("$._templates['partiallyUpdateEmployee'].properties[1].required", is(false)));
+			.andExpect(status().is5xxServerError())
+			.andReturn()
+			.getResolvedException();
+
+		assertThat(exception.getMessage(), containsString("Affordance's URI /employees"));
+		assertThat(exception.getMessage(), containsString("doesn't match self link /employees/0"));
 	}
 
 	@Test
 	public void collectionOfEmployees() throws Exception {
 
-		this.mockMvc.perform(get("/employees").accept(MediaTypes.HAL_FORMS_JSON))
+		Exception exception = this.mockMvc.perform(get("/employees").accept(MediaTypes.HAL_FORMS_JSON))
 			.andDo(print())
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$._embedded.employees[0].name", is("Frodo Baggins")))
-			.andExpect(jsonPath("$._embedded.employees[0].role", is("ring bearer")))
-			.andExpect(jsonPath("$._embedded.employees[0]._links['self'].href", is("http://localhost/employees/0")))
-			.andExpect(jsonPath("$._embedded.employees[1].name", is("Bilbo Baggins")))
-			.andExpect(jsonPath("$._embedded.employees[1].role", is("burglar")))
-			.andExpect(jsonPath("$._embedded.employees[1]._links['self'].href", is("http://localhost/employees/1")));
+			.andExpect(status().is5xxServerError())
+			.andReturn()
+			.getResolvedException();
+
+		assertThat(exception.getMessage(), containsString("Affordance's URI /employees/0"));
+		assertThat(exception.getMessage(), containsString("doesn't match self link /employees"));
 	}
 
+	/**
+	 * This controller violates HAL-FORMS spec requirements. We use it to verify the serializers can catch it.
+	 */
 	@RestController
-	static class EmployeeController {
+	static class BadController {
 
 		private final static Map<Integer, Employee> EMPLOYEES = new TreeMap<Integer, Employee>();
 
@@ -141,9 +138,9 @@ public class HalFormsWebMvcTest {
 			}
 
 			// Generate an "Affordance" based on this method (the "self" link)
-			Link selfLink = linkTo(methodOn(EmployeeController.class).all()).withSelfRel()
+			Link selfLink = linkTo(methodOn(BadController.class).all()).withSelfRel()
 				.withAffordances(byLink(
-					linkTo(methodOn(EmployeeController.class).newEmployee(null)).withRel("newEmployee")
+					linkTo(methodOn(BadController.class).updateEmployee(null, "0")).withRel("newEmployee")
 				));
 
 			// Return the collection of employee resources along with the composite affordance
@@ -155,19 +152,20 @@ public class HalFormsWebMvcTest {
 
 			// Start the affordance with the "self" link, i.e. this method.
 			Link findOneLink =
-				linkTo(methodOn(EmployeeController.class).findOne(id)).withSelfRel();
+				linkTo(methodOn(BadController.class).findOne(id)).withSelfRel();
 
 			// Define final link as means to find entire collection.
-			Link employeesLink = linkTo(methodOn(EmployeeController.class).all()).withRel("employees");
+			Link employeesLink =
+				linkTo(methodOn(BadController.class).all()).withRel("employees")
+					.withAffordances(byLink(
+						linkTo(methodOn(BadController.class).newEmployee(null)).withRel("newEmployee")
+					));
 
 			// Return the affordance + a link back to the entire collection resource.
 			return new Resource<Employee>(
 				EMPLOYEES.get(Integer.parseInt(id)),
 				findOneLink
-					.withAffordances(byLink(
-						linkTo(methodOn(EmployeeController.class).updateEmployee(null, id)).withRel("put")))
-					.withAffordances(byLink(
-						linkTo(methodOn(EmployeeController.class).partiallyUpdateEmployee(null, id)).withRel("patch"))),
+					.withAffordances(byLink(employeesLink)),
 				employeesLink);
 		}
 
@@ -235,8 +233,8 @@ public class HalFormsWebMvcTest {
 	static class TestConfig {
 
 		@Bean
-		EmployeeController employeeController() {
-			return new EmployeeController();
+		BadController employeeController() {
+			return new BadController();
 		}
 
 	}
