@@ -86,10 +86,6 @@ public class HalFormsWebMvcTest {
 	@Test
 	public void singleEmployee() throws Exception {
 
-//		this.mockMvc.perform(get("/employees").accept(MediaTypes.HAL_FORMS_JSON))
-//			.andDo(print())
-//			.andExpect(status().isOk());
-
 		this.mockMvc.perform(get("/employees/0").accept(MediaTypes.HAL_FORMS_JSON))
 			.andDo(print())
 			.andExpect(status().isOk())
