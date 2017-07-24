@@ -39,7 +39,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 /**
- * Represents a HAL-Forms document.
+ * Representation of a HAL-Forms document.
  * 
  * @author Dietrich Schulten
  * @author Greg Turnquist
