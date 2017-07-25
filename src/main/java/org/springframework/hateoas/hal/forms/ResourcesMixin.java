@@ -15,14 +15,17 @@
  */
 package org.springframework.hateoas.hal.forms;
 
+import org.springframework.hateoas.hal.forms.HalFormsDeserializers.HalFormsResourcesDeserializer;
 import org.springframework.hateoas.hal.forms.HalFormsSerializers.HalFormsResourcesSerializer;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 /**
  * @author Greg Turnquist
  */
 @JsonSerialize(using = HalFormsResourcesSerializer.class)
+@JsonDeserialize(using = HalFormsResourcesDeserializer.class)
 abstract class ResourcesMixin {
 
 }

@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.hateoas.Resource;
+import org.springframework.hateoas.Resources;
 import org.springframework.http.MediaType;
 
 import com.fasterxml.jackson.core.JsonParseException;
@@ -78,8 +79,57 @@ public class HalFormsDeserializers {
 		}
 
 		@Override
-		public JsonDeserializer<?> createContextual(DeserializationContext deserializationContext, BeanProperty beanProperty) throws JsonMappingException {
+		public JsonDeserializer<?> createContextual(DeserializationContext deserializationContext, BeanProperty property) throws JsonMappingException {
+
+			JavaType vc = property.getType().getContentType();
+			HalFormsResourceDeserializer des = new HalFormsResourceDeserializer(vc);
+			return des;
+		}
+	}
+
+	static class HalFormsResourcesDeserializer extends ContainerDeserializerBase<Resources<?>> implements ContextualDeserializer {
+
+		private JavaType contentType;
+
+		HalFormsResourcesDeserializer(JavaType contentType) {
+
+			super(contentType);
+			this.contentType = contentType;
+		}
+
+		HalFormsResourcesDeserializer() {
+			this(TypeFactory.defaultInstance().constructSimpleType(HalFormsDocument.class, new JavaType[0]));
+		}
+
+		@Override
+		public Resources<?> deserialize(JsonParser p, DeserializationContext ctxt) throws IOException, JsonProcessingException {
+
+			HalFormsDocument doc = p.getCodec().readValue(p, HalFormsDocument.class);
+
+			return new Resources<Object>(
+				(Iterable<Object>) ((Map<?, ?>) doc.getResources()).values().iterator().next(),
+				doc.getLinks());
+		}
+
+		@Override
+		public JavaType getContentType() {
+			return this.contentType;
+		}
+
+		@Override
+		public JsonDeserializer<Object> getContentDeserializer() {
 			return null;
+		}
+
+		@Override
+		public JsonDeserializer<?> createContextual(DeserializationContext ctxt, BeanProperty property) throws JsonMappingException {
+
+			if (property != null) {
+				JavaType vc = property.getType().getContentType();
+				return new HalFormsResourcesDeserializer(vc);
+			} else {
+				return new HalFormsResourcesDeserializer(ctxt.getContextualType());
+			}
 		}
 	}
 
@@ -109,6 +159,8 @@ public class HalFormsDeserializers {
 				} else if ("_templates".equals(jp.getCurrentName())) {
 					TypeReference<Map<String, Template>> type = new TypeReference<Map<String, Template>>() {};
 					halFormsDocumentBuilder.templates(jp.getCodec().<Map<? extends String, ? extends Template>> readValue(jp, type));
+				} else if ("_embedded".equals(jp.getCurrentName())) {
+					halFormsDocumentBuilder.resources(jp.getCodec().readValue(jp, Map.class));
 				}
 			}
 
