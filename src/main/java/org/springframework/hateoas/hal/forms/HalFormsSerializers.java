@@ -20,10 +20,7 @@ import static org.springframework.hateoas.hal.forms.HalFormsUtils.*;
 import java.io.IOException;
 import java.util.Map;
 
-import lombok.Data;
-
 import org.springframework.hateoas.Resource;
-import org.springframework.hateoas.ResourceSupport;
 import org.springframework.hateoas.Resources;
 import org.springframework.hateoas.hal.Jackson2HalModule;
 
@@ -143,16 +140,6 @@ public class HalFormsSerializers {
 		@Override
 		public JsonSerializer<?> createContextual(SerializerProvider prov, BeanProperty property) throws JsonMappingException {
 			return new HalFormsResourcesSerializer(property, embeddedMapper);
-		}
-	}
-
-	@Data
-	static class HalFormsEmbeddedWrapper extends ResourceSupport {
-
-		private final Resources<?> value;
-
-		public HalFormsEmbeddedWrapper(Resources<?> value) {
-			this.value = value;
 		}
 	}
 }

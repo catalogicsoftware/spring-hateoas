@@ -23,15 +23,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.hateoas.AbstractJackson2MarshallingIntegrationTest;
 import org.springframework.hateoas.Link;
+import org.springframework.hateoas.Links;
+import org.springframework.hateoas.PagedResources;
 import org.springframework.hateoas.Resource;
 import org.springframework.hateoas.ResourceSupport;
 import org.springframework.hateoas.Resources;
 import org.springframework.hateoas.core.AnnotationRelProvider;
+import org.springframework.hateoas.hal.SimpleAnnotatedPojo;
 import org.springframework.hateoas.hal.SimplePojo;
 import org.springframework.hateoas.hal.forms.Jackson2HalFormsModule.HalFormsHandlerInstantiator;
 import org.springframework.hateoas.support.MappingUtils;
@@ -43,6 +47,8 @@ import com.fasterxml.jackson.databind.SerializationFeature;
  */
 public class Jackson2HalFormsIntegrationTest extends AbstractJackson2MarshallingIntegrationTest {
 
+	static final Links PAGINATION_LINKS = new Links(new Link("foo", Link.REL_NEXT), new Link("bar", Link.REL_PREVIOUS));
+	
 	@Before
 	public void setUpModule() {
 
@@ -175,6 +181,111 @@ public class Jackson2HalFormsIntegrationTest extends AbstractJackson2Marshalling
 				mapper.getTypeFactory().constructParametricType(Resource.class, SimplePojo.class)));
 
 		assertThat(result, is(expected));
+	}
+
+	@Test
+	public void rendersMultipleResourceResourcesAsEmbedded() throws Exception {
+
+		Resources<Resource<SimplePojo>> resources = setupResources();
+		resources.add(new Link("localhost"));
+
+		assertThat(write(resources),
+			is(MappingUtils.read(new ClassPathResource("multiple-resource-resources.json", getClass()))));
+	}
+
+	@Test
+	public void deserializesMultipleResourceResourcesAsEmbedded() throws Exception {
+
+		Resources<Resource<SimplePojo>> expected = setupResources();
+		expected.add(new Link("localhost"));
+
+		Resources<Resource<SimplePojo>> result =
+			mapper.readValue(MappingUtils.read(new ClassPathResource("multiple-resource-resources.json", getClass())),
+				mapper.getTypeFactory().constructParametricType(Resources.class,
+					mapper.getTypeFactory().constructParametricType(Resource.class, SimplePojo.class)));
+
+		assertThat(result, is(expected));
+	}
+
+	@Test
+	public void serializesAnnotatedResourceResourcesAsEmbedded() throws Exception {
+
+		List<Resource<SimpleAnnotatedPojo>> content = new ArrayList<Resource<SimpleAnnotatedPojo>>();
+		content.add(new Resource<SimpleAnnotatedPojo>(new SimpleAnnotatedPojo("test1", 1), new Link("localhost")));
+
+		Resources<Resource<SimpleAnnotatedPojo>> resources = new Resources<Resource<SimpleAnnotatedPojo>>(content);
+		resources.add(new Link("localhost"));
+
+		assertThat(write(resources),
+			is(MappingUtils.read(new ClassPathResource("annotated-resource-resources.json", getClass()))));
+	}
+
+	@Test
+	public void deserializesAnnotatedResourceResourcesAsEmbedded() throws Exception {
+
+		List<Resource<SimpleAnnotatedPojo>> content = new ArrayList<Resource<SimpleAnnotatedPojo>>();
+		content.add(new Resource<SimpleAnnotatedPojo>(new SimpleAnnotatedPojo("test1", 1), new Link("localhost")));
+
+		Resources<Resource<SimpleAnnotatedPojo>> expected = new Resources<Resource<SimpleAnnotatedPojo>>(content);
+		expected.add(new Link("localhost"));
+
+		Resources<Resource<SimpleAnnotatedPojo>> result =
+			mapper.readValue(MappingUtils.read(new ClassPathResource("annotated-resource-resources.json", getClass())),
+				mapper.getTypeFactory().constructParametricType(Resources.class,
+					mapper.getTypeFactory().constructParametricType(Resource.class, SimpleAnnotatedPojo.class)));
+
+		assertThat(result, is(expected));
+	}
+
+	@Test
+	public void serializesMultipleAnnotatedResourceResourcesAsEmbedded() throws Exception {
+		assertThat(write(setupAnnotatedResources()),
+			is(MappingUtils.read(new ClassPathResource("annotated-embedded-resources-reference.json", getClass()))));
+	}
+
+	@Test
+	public void deserializesMultipleAnnotatedResourceResourcesAsEmbedded() throws Exception {
+
+		Resources<Resource<SimpleAnnotatedPojo>> result =
+			mapper.readValue(MappingUtils.read(new ClassPathResource("annotated-embedded-resources-reference.json", getClass())),
+				mapper.getTypeFactory().constructParametricType(Resources.class,
+					mapper.getTypeFactory().constructParametricType(Resource.class, SimpleAnnotatedPojo.class)));
+
+		assertThat(result, is(setupAnnotatedResources()));
+	}
+
+	@Test
+	@Ignore
+	public void serializesPagedResource() throws Exception {
+		assertThat(write(setupAnnotatedPagedResources()),
+			is(MappingUtils.read(new ClassPathResource("annotated-paged-resources.json", getClass()))));
+	}
+
+	private static Resources<Resource<SimplePojo>> setupResources() {
+
+		List<Resource<SimplePojo>> content = new ArrayList<Resource<SimplePojo>>();
+		content.add(new Resource<SimplePojo>(new SimplePojo("test1", 1), new Link("localhost")));
+		content.add(new Resource<SimplePojo>(new SimplePojo("test2", 2), new Link("localhost")));
+
+		return new Resources<Resource<SimplePojo>>(content);
+	}
+
+	private static Resources<Resource<SimpleAnnotatedPojo>> setupAnnotatedResources() {
+
+		List<Resource<SimpleAnnotatedPojo>> content = new ArrayList<Resource<SimpleAnnotatedPojo>>();
+		content.add(new Resource<SimpleAnnotatedPojo>(new SimpleAnnotatedPojo("test1", 1), new Link("localhost")));
+		content.add(new Resource<SimpleAnnotatedPojo>(new SimpleAnnotatedPojo("test2", 2), new Link("localhost")));
+
+		return new Resources<Resource<SimpleAnnotatedPojo>>(content);
+	}
+
+	private static Resources<Resource<SimpleAnnotatedPojo>> setupAnnotatedPagedResources() {
+
+		List<Resource<SimpleAnnotatedPojo>> content = new ArrayList<Resource<SimpleAnnotatedPojo>>();
+		content.add(new Resource<SimpleAnnotatedPojo>(new SimpleAnnotatedPojo("test1", 1), new Link("localhost")));
+		content.add(new Resource<SimpleAnnotatedPojo>(new SimpleAnnotatedPojo("test2", 2), new Link("localhost")));
+
+		return new PagedResources<Resource<SimpleAnnotatedPojo>>(content, new PagedResources.PageMetadata(2, 0, 4), PAGINATION_LINKS);
 	}
 
 }
