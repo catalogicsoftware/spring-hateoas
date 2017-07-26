@@ -15,16 +15,17 @@
  */
 package org.springframework.hateoas.hal.forms;
 
-import static org.springframework.hateoas.hal.Jackson2HalModule.*;
 import static org.springframework.hateoas.hal.forms.HalFormsDocument.*;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.springframework.hateoas.Resource;
-import org.springframework.hateoas.Resources;
+import org.springframework.hateoas.hal.Jackson2HalModule.HalLinkListDeserializer;
+import org.springframework.hateoas.hal.forms.HalFormsDocument.*;
 import org.springframework.http.MediaType;
 
 import com.fasterxml.jackson.core.JsonParseException;
@@ -37,6 +38,7 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.deser.ContextualDeserializer;
 import com.fasterxml.jackson.databind.deser.std.ContainerDeserializerBase;
 import com.fasterxml.jackson.databind.type.TypeFactory;
@@ -87,7 +89,7 @@ public class HalFormsDeserializers {
 		}
 	}
 
-	static class HalFormsResourcesDeserializer extends ContainerDeserializerBase<Resources<?>> implements ContextualDeserializer {
+	static class HalFormsResourcesDeserializer extends ContainerDeserializerBase<List<Object>> implements ContextualDeserializer {
 
 		private JavaType contentType;
 
@@ -98,17 +100,35 @@ public class HalFormsDeserializers {
 		}
 
 		HalFormsResourcesDeserializer() {
-			this(TypeFactory.defaultInstance().constructSimpleType(HalFormsDocument.class, new JavaType[0]));
+			this(TypeFactory.defaultInstance().constructCollectionLikeType(List.class, Object.class));
 		}
 
 		@Override
-		public Resources<?> deserialize(JsonParser p, DeserializationContext ctxt) throws IOException, JsonProcessingException {
+		public List<Object> deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException {
 
-			HalFormsDocument doc = p.getCodec().readValue(p, HalFormsDocument.class);
+			List<Object> result = new ArrayList<Object>();
+			JsonDeserializer<Object> deser = ctxt.findRootValueDeserializer(contentType);
+			Object object;
 
-			return new Resources<Object>(
-				(Iterable<Object>) ((Map<?, ?>) doc.getResources()).values().iterator().next(),
-				doc.getLinks());
+			// links is an object, so we parse till we find its end.
+			while (!JsonToken.END_OBJECT.equals(jp.nextToken())) {
+
+				if (!JsonToken.FIELD_NAME.equals(jp.getCurrentToken())) {
+					throw new JsonParseException("Expected relation name", jp.getCurrentLocation());
+				}
+
+				if (JsonToken.START_ARRAY.equals(jp.nextToken())) {
+					while (!JsonToken.END_ARRAY.equals(jp.nextToken())) {
+						object = deser.deserialize(jp, ctxt);
+						result.add(object);
+					}
+				} else {
+					object = deser.deserialize(jp, ctxt);
+					result.add(object);
+				}
+			}
+
+			return result;
 		}
 
 		@Override
@@ -136,9 +156,19 @@ public class HalFormsDeserializers {
 	/**
 	 * Deserialize an entire <a href="https://rwcbook.github.io/hal-forms/">HAL-Forms</a> document.
 	 */
-	static class HalFormsDocumentDeserializer extends JsonDeserializer<HalFormsDocument> {
+	static class HalFormsDocumentDeserializer extends JsonDeserializer<HalFormsDocument<?>> implements ContextualDeserializer {
 
 		private final HalLinkListDeserializer linkDeser = new HalLinkListDeserializer();
+
+		private JavaType contentType;
+
+		HalFormsDocumentDeserializer(JavaType contentType) {
+			this.contentType = contentType;
+		}
+
+		HalFormsDocumentDeserializer() {
+			this(null);
+		}
 
 		@Override
 		public HalFormsDocument deserialize(JsonParser jp, DeserializationContext ctxt)
@@ -160,11 +190,50 @@ public class HalFormsDeserializers {
 					TypeReference<Map<String, Template>> type = new TypeReference<Map<String, Template>>() {};
 					halFormsDocumentBuilder.templates(jp.getCodec().<Map<? extends String, ? extends Template>> readValue(jp, type));
 				} else if ("_embedded".equals(jp.getCurrentName())) {
-					halFormsDocumentBuilder.resources(jp.getCodec().readValue(jp, Map.class));
+
+					ObjectMapper mapper = (ObjectMapper) jp.getCodec();
+					JavaType targetType = mapper.getTypeFactory().constructParametricType(
+						Map.class,
+						mapper.getTypeFactory().constructSimpleType(String.class, new JavaType[0]),
+						this.contentType);
+
+					Object resources = mapper.readValue(jp, targetType);
+
+					System.out.println(resources);
+//					halFormsDocumentBuilder.
 				}
 			}
 
 			return halFormsDocumentBuilder.build();
+		}
+
+		/**
+		 * Method called to see if a different (or differently configured) deserializer
+		 * is needed to deserialize values of specified property.
+		 * Note that instance that this method is called on is typically shared one and
+		 * as a result method should <b>NOT</b> modify this instance but rather construct
+		 * and return a new instance. This instance should only be returned as-is, in case
+		 * it is already suitable for use.
+		 *
+		 * @param ctxt Deserialization context to access configuration, additional
+		 * deserializers that may be needed by this deserializer
+		 * @param property Method, field or constructor parameter that represents the property
+		 * (and is used to assign deserialized value).
+		 * Should be available; but there may be cases where caller can not provide it and
+		 * null is passed instead (in which case impls usually pass 'this' deserializer as is)
+		 * @return Deserializer to use for deserializing values of specified property;
+		 * may be this instance or a new instance.
+		 * @throws JsonMappingException
+		 */
+		@Override
+		public JsonDeserializer<?> createContextual(DeserializationContext ctxt, BeanProperty property) throws JsonMappingException {
+
+			if (property != null) {
+				JavaType vc = property.getType().getContentType();
+				return new HalFormsDocumentDeserializer(vc);
+			} else {
+				return new HalFormsDocumentDeserializer(ctxt.getContextualType());
+			}
 		}
 	}
 

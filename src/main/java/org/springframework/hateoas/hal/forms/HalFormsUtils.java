@@ -35,78 +35,26 @@ import org.springframework.hateoas.ResourceSupport;
 import org.springframework.hateoas.Resources;
 import org.springframework.http.HttpMethod;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 /**
  * @author Greg Turnquist
  */
 final class HalFormsUtils {
 
-	public static HalFormsDocument toHalFormsDocument(Object object, ObjectMapper objectMapper) {
+	public static <T> HalFormsDocument<T> toHalFormsDocument(Resources<T> resources) {
 
-		if (object == null) {
-			return null;
-		}
-
-		if (object instanceof HalFormsDocument) {
-			return (HalFormsDocument) object;
-		}
-
-		if (object instanceof Resources) {
-			return toHalFormsDocument((Resources<?>) object);
-		} else if (object instanceof Resource) {
-			return toHalFormsDocument((Resource<?>) object);
-		} else if (object instanceof ResourceSupport) {
-			return toHalFormsDocument((ResourceSupport) object);
-		} else { // bean
-			throw new RuntimeException("Don't know how to convert a " + object.getClass().getSimpleName() +
-				" to " + HalFormsDocument.class.getSimpleName());
-		}
+		return HalFormsDocument.<T>halFormsDocument()
+			.resources(resources.getContent())
+			.links(resources.getLinks())
+			.templates(findTemplates(resources))
+			.build();
 	}
 
-	private static HalFormsDocument toHalFormsDocument(Resources<?> resources) {
+	public static <T> HalFormsDocument<T> toHalFormsDocument(Map<String, Object> embeddeds, Resources<T> resources) {
 
-		Map<String, Template> templates = new HashMap<String, Template>();
-
-		if (resources.hasLink(Link.REL_SELF)) {
-			for (Affordance affordance : resources.getLink(Link.REL_SELF).getAffordances()) {
-
-				validate(resources, affordance);
-
-				Template template = new Template();
-				template.setHttpMethod(HttpMethod.valueOf(affordance.getVerb()));
-
-				List<Property> properties = new ArrayList<Property>();
-
-				for (Map.Entry<String, Class<?>> entry : affordance.getProperties().entrySet()) {
-					properties.add(new Property(entry.getKey(), null, null, null, null, false, affordance.isRequired(), false));
-				}
-
-				template.setProperties(properties);
-
-				if (templates.isEmpty()) {
-					templates.put("default", template);
-				} else {
-					templates.put(affordance.getMethodName(), template);
-				}
-			}
-		}
-
-		Object content;
-
-		/**
-		 * Resources in the Jackson2HalForms module are converted into a Map and inserted into a single element collection.
-		 */
-		if (resources.getContent().size() == 1 && resources.getContent().iterator().next() instanceof Map) {
-			content = resources.getContent().iterator().next();
-		} else {
-			content = resources.getContent();
-		}
-
-		return HalFormsDocument.halFormsDocument()
-			.resources(content)
+		return HalFormsDocument.<T>halFormsDocument()
+			.embedded(embeddeds)
 			.links(resources.getLinks())
-			.templates(templates)
+			.templates(findTemplates(resources))
 			.build();
 	}
 
@@ -116,7 +64,50 @@ final class HalFormsUtils {
 	 * @param resource
 	 * @return
 	 */
-	private static HalFormsDocument toHalFormsDocument(Resource<?> resource) {
+	public static <T> HalFormsDocument<T> toHalFormsDocument(Resource<T> resource) {
+
+		return HalFormsDocument.<T>halFormsDocument()
+			.resource(resource.getContent())
+			.links(resource.getLinks())
+			.templates(findTemplates(resource))
+			.build();
+	}
+
+	/**
+	 * Transform a {@link ResourceSupport} into a {@link HalFormsDocument}.
+	 *
+	 * @param rs
+	 * @return
+	 */
+	public static HalFormsDocument<Map<String, Object>> toHalFormsDocument(ResourceSupport rs) {
+
+		Map<String, Object> content = new HashMap<String, Object>();
+
+		Set<String> propertiesToIgnore = new HashSet<String>();
+		propertiesToIgnore.add("class");
+		propertiesToIgnore.add("id");
+		propertiesToIgnore.add("links");
+
+		for (PropertyDescriptor descriptor : getPropertyDescriptors(rs)) {
+			if (!propertiesToIgnore.contains(descriptor.getName())) {
+				try {
+					content.put(descriptor.getName(), descriptor.getReadMethod().invoke(rs));
+				} catch (IllegalAccessException e) {
+					throw new RuntimeException(e);
+				} catch (InvocationTargetException e) {
+					throw new RuntimeException(e);
+				}
+			}
+		}
+
+		return HalFormsDocument.<Map<String, Object>>halFormsDocument()
+			.resource(content)
+			.links(rs.getLinks())
+			.templates(findTemplates(rs))
+			.build();
+	}
+
+	private static Map<String, Template> findTemplates(ResourceSupport resource) {
 
 		Map<String, Template> templates = new HashMap<String, Template>();
 
@@ -144,45 +135,7 @@ final class HalFormsUtils {
 			}
 		}
 
-		return HalFormsDocument.halFormsDocument()
-			.resource(resource.getContent())
-			.links(resource.getLinks())
-			.templates(templates)
-			.build();
-	}
-
-	/**
-	 * Transform a {@link ResourceSupport} into a {@link HalFormsDocument}.
-	 *
-	 * @param rs
-	 * @return
-	 */
-	private static HalFormsDocument toHalFormsDocument(ResourceSupport rs) {
-
-		Map<String, Object> content = new HashMap<String, Object>();
-
-		Set<String> propertiesToIgnore = new HashSet<String>();
-		propertiesToIgnore.add("class");
-		propertiesToIgnore.add("id");
-		propertiesToIgnore.add("links");
-
-		for (PropertyDescriptor descriptor : getPropertyDescriptors(rs)) {
-			if (!propertiesToIgnore.contains(descriptor.getName())) {
-				try {
-					content.put(descriptor.getName(), descriptor.getReadMethod().invoke(rs));
-				} catch (IllegalAccessException e) {
-					throw new RuntimeException(e);
-				} catch (InvocationTargetException e) {
-					throw new RuntimeException(e);
-				}
-			}
-		}
-
-		return HalFormsDocument.halFormsDocument()
-			.resource(content)
-			.links(rs.getLinks())
-			.templates(new HashMap<String, Template>())
-			.build();
+		return templates;
 	}
 
 	/**

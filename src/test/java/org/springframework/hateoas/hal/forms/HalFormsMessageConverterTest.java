@@ -83,7 +83,7 @@ public class HalFormsMessageConverterTest {
 
 		assertThat(convertedMessage, instanceOf(HalFormsDocument.class));
 
-		HalFormsDocument halFormsDocument = (HalFormsDocument) convertedMessage;
+		HalFormsDocument<?> halFormsDocument = (HalFormsDocument<?>) convertedMessage;
 
 		assertThat(halFormsDocument.getLinks().size(), is(2));
 		assertThat(halFormsDocument.getLinks().get(0).getHref(), is("/employees"));

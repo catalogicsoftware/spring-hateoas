@@ -18,10 +18,12 @@ package org.springframework.hateoas.hal.forms;
 import static org.springframework.hateoas.hal.forms.HalFormsUtils.*;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.Map;
 
+import lombok.Data;
+
 import org.springframework.hateoas.Resource;
+import org.springframework.hateoas.ResourceSupport;
 import org.springframework.hateoas.Resources;
 import org.springframework.hateoas.hal.Jackson2HalModule;
 
@@ -30,7 +32,6 @@ import com.fasterxml.jackson.databind.BeanProperty;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.jsontype.TypeSerializer;
 import com.fasterxml.jackson.databind.ser.ContainerSerializer;
@@ -58,9 +59,7 @@ public class HalFormsSerializers {
 		@Override
 		public void serialize(Resource<?> value, JsonGenerator gen, SerializerProvider provider) throws IOException {
 
-			ObjectMapper mapper = (ObjectMapper) gen.getCodec();
-
-			HalFormsDocument doc = toHalFormsDocument(value, mapper);
+			HalFormsDocument<?> doc = toHalFormsDocument(value);
 
 			provider
 				.findValueSerializer(HalFormsDocument.class, property)
@@ -112,12 +111,9 @@ public class HalFormsSerializers {
 		@Override
 		public void serialize(Resources<?> value, JsonGenerator gen, SerializerProvider provider) throws IOException {
 
-			ObjectMapper mapper = (ObjectMapper) gen.getCodec();
-
 			Map<String, Object> embeddeds = embeddedMapper.map(value.getContent());
-			Resources<?> embeddedResources = new Resources<Map<String, Object>>(Collections.singletonList(embeddeds), value.getLinks());
 
-			HalFormsDocument doc = toHalFormsDocument(embeddedResources, mapper);
+			HalFormsDocument<?> doc = toHalFormsDocument(embeddeds, value);
 
 			provider
 				.findValueSerializer(HalFormsDocument.class, property)
@@ -147,6 +143,16 @@ public class HalFormsSerializers {
 		@Override
 		public JsonSerializer<?> createContextual(SerializerProvider prov, BeanProperty property) throws JsonMappingException {
 			return new HalFormsResourcesSerializer(property, embeddedMapper);
+		}
+	}
+
+	@Data
+	static class HalFormsEmbeddedWrapper extends ResourceSupport {
+
+		private final Resources<?> value;
+
+		public HalFormsEmbeddedWrapper(Resources<?> value) {
+			this.value = value;
 		}
 	}
 }

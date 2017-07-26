@@ -20,7 +20,6 @@ import static org.hamcrest.MatcherAssert.*;
 import static org.hamcrest.core.Is.is;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -59,7 +58,7 @@ public class HalFormsUtilsTest extends AbstractJackson2MarshallingIntegrationTes
 		expected.add(new Link("localhost"));
 		expected.add(new Link("localhost2"));
 
-		HalFormsDocument doc = (HalFormsDocument) HalFormsUtils.toHalFormsDocument(expected, mapper);
+		HalFormsDocument doc = (HalFormsDocument) HalFormsUtils.toHalFormsDocument(expected);
 
 		assertThat(doc, is(notNullValue()));
 		assertThat(doc.getLinks().size(), is(2));
@@ -73,15 +72,15 @@ public class HalFormsUtilsTest extends AbstractJackson2MarshallingIntegrationTes
 		expected.add(new Link("localhost"));
 		expected.add(new Link("localhost2"));
 
-		HalFormsDocument doc = HalFormsUtils.toHalFormsDocument(expected, mapper);
+		HalFormsDocument doc = HalFormsUtils.toHalFormsDocument(expected);
 
 		assertThat(doc, is(notNullValue()));
 		assertThat(doc.getLinks().size(), is(2));
 		assertThat(doc.getTemplates().size(), is(0));
 		
-		assertThat(doc.getContent(), is(notNullValue()));
+		assertThat(doc.getResource(), is(notNullValue()));
 
-		Map<String, Object> content = (Map<String, Object>) doc.getContent();
+		Map<String, Object> content = (Map<String, Object>) doc.getResource();
 		assertThat(content.containsKey("name"), is(true));
 		assertThat((String) content.get("name"), is("Frodo"));
 	}
@@ -93,15 +92,15 @@ public class HalFormsUtilsTest extends AbstractJackson2MarshallingIntegrationTes
 		employee.add(new Link("localhost"));
 		employee.add(new Link("localhost2"));
 
-		HalFormsDocument doc = HalFormsUtils.toHalFormsDocument(employee, mapper);
+		HalFormsDocument<Employee> doc = HalFormsUtils.toHalFormsDocument(employee);
 
 		assertThat(doc, is(notNullValue()));
 		assertThat(doc.getLinks().size(), is(2));
 		assertThat(doc.getTemplates().size(), is(0));
 
-		assertThat(doc.getContent(), is(notNullValue()));
+		assertThat(doc.getResource(), is(notNullValue()));
 
-		Employee insertedEmployee = (Employee) doc.getContent();
+		Employee insertedEmployee = doc.getResource();
 
 		assertThat(insertedEmployee.getName(), is("Frodo"));
 		assertThat(insertedEmployee.getRole(), is("ring bearer"));
@@ -114,15 +113,15 @@ public class HalFormsUtilsTest extends AbstractJackson2MarshallingIntegrationTes
 		Resources<Employee> employeeResources = new Resources<Employee>(employees);
 		employeeResources.add(new Link("localhost/employees").withRel("employees"));
 
-		HalFormsDocument doc = HalFormsUtils.toHalFormsDocument(employeeResources, mapper);
+		HalFormsDocument<Employee> doc = HalFormsUtils.toHalFormsDocument(employeeResources);
 		
 		assertThat(doc, is(notNullValue()));
 		assertThat(doc.getLinks().size(), is(1));
 		assertThat(doc.getTemplates().size(), is(0));
 
-		assertThat(doc.getContent(), is(notNullValue()));
+		assertThat(doc.getResources(), is(notNullValue()));
 
-		List<Employee> insertedEmployees = new ArrayList<Employee>((Collection<Employee>) doc.getContent());
+		List<Employee> insertedEmployees = new ArrayList<Employee>(doc.getResources());
 
 		assertThat(insertedEmployees.size(), is(1));
 		assertThat(insertedEmployees.get(0).getName(), is("Frodo"));
@@ -139,16 +138,17 @@ public class HalFormsUtilsTest extends AbstractJackson2MarshallingIntegrationTes
 		Resources<Resource<Employee>> employeeResources = new Resources<Resource<Employee>>(employees);
 		employeeResources.add(new Link("localhost/employees").withRel("employees"));
 
-		HalFormsDocument doc = HalFormsUtils.toHalFormsDocument(employeeResources, mapper);
+		HalFormsDocument<Resource<Employee>> doc =
+			HalFormsUtils.toHalFormsDocument(employeeResources);
 
 		assertThat(doc, is(notNullValue()));
 		assertThat(doc.getLinks().size(), is(1));
 		assertThat(doc.getTemplates().size(), is(0));
 
-		assertThat(doc.getContent(), is(notNullValue()));
+		assertThat(doc.getResources(), is(notNullValue()));
 
-		ArrayList<Resource<Employee>> insertedEmployees =
-			new ArrayList<Resource<Employee>>((Collection<Resource<Employee>>) doc.getContent());
+		List<Resource<Employee>> insertedEmployees =
+			new ArrayList<Resource<Employee>>(doc.getResources());
 
 		assertThat(insertedEmployees.size(), is(1));
 		assertThat(insertedEmployees.get(0).getContent().getName(), is("Frodo"));

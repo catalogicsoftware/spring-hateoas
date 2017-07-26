@@ -19,6 +19,7 @@ import static com.fasterxml.jackson.annotation.JsonInclude.*;
 import static org.springframework.hateoas.hal.Jackson2HalModule.*;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,7 +29,6 @@ import lombok.Data;
 import lombok.Singular;
 
 import org.springframework.hateoas.Link;
-import org.springframework.hateoas.hal.forms.HalFormsDeserializers.HalFormsDocumentDeserializer;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -46,38 +46,36 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
  */
 @Data
 @Builder(builderMethodName = "halFormsDocument")
-@JsonPropertyOrder({ "resource", "resources", "links", "templates" })
-@JsonDeserialize(using = HalFormsDocumentDeserializer.class)
-public class HalFormsDocument {
+@JsonPropertyOrder({ "resource", "resources", "embedded", "links", "templates" })
+//@JsonDeserialize(using = HalFormsDocumentDeserializer.class)
+public class HalFormsDocument<T> {
 
-	/**
-	 * Attribute used to store single instance values.
-	 */
 	@JsonUnwrapped
 	@JsonInclude(Include.NON_NULL)
-	private Object resource;
+	private T resource;
 
-	/**
-	 * Attributes used to store collections.
-	 */
+	@JsonIgnore
+	private Collection<T> resources;
+
 	@JsonProperty("_embedded")
 	@JsonInclude(Include.NON_NULL)
-	private Object resources;
+	private Map<String, Object> embedded;
 
 	@Singular private List<Link> links;
 
 	@Singular private Map<String, Template> templates;
 
-	HalFormsDocument(Object resource, Object resources, List<Link> links, Map<String, Template> templates) {
+	HalFormsDocument(T resource, Collection<T> resources, Map<String, Object> embedded, List<Link> links, Map<String, Template> templates) {
 
 		this.resource = resource;
 		this.resources = resources;
+		this.embedded = embedded;
 		this.links = links;
 		this.templates = templates;
 	}
 
 	HalFormsDocument() {
-		this(null, null, new ArrayList<Link>(), new HashMap<String, Template>());
+		this(null, null, null, new ArrayList<Link>(), new HashMap<String, Template>());
 	}
 
 	@JsonProperty("_links")
@@ -104,19 +102,4 @@ public class HalFormsDocument {
 		return this.templates.get(key);
 	}
 
-	/**
-	 * General purpose way to retrieve stored data. See {@link #getResource()} or {@link #getResources()} if you know the
-	 * data type you seek and wish to be more specific.
-	 *
-	 * @return
-	 */
-	@JsonIgnore
-	public Object getContent() {
-
-		if (this.resources != null) {
-			return this.resources;
-		} else {
-			return this.resource;
-		}
-	}
 }

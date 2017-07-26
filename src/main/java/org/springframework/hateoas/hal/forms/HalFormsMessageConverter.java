@@ -75,8 +75,6 @@ public class HalFormsMessageConverter extends AbstractHttpMessageConverter<Objec
 	protected void writeInternal(final Object t, final HttpOutputMessage outputMessage)
 			throws IOException, HttpMessageNotWritableException {
 
-		Object entity = HalFormsUtils.toHalFormsDocument(t, objectMapper);
-
 		JsonGenerator jsonGenerator = objectMapper.getFactory().createGenerator(outputMessage.getBody(), JsonEncoding.UTF8);
 
 		// A workaround for JsonGenerators not applying serialization features
@@ -86,7 +84,7 @@ public class HalFormsMessageConverter extends AbstractHttpMessageConverter<Objec
 		}
 
 		try {
-			objectMapper.writeValue(jsonGenerator, entity);
+			objectMapper.writeValue(jsonGenerator, t);
 		} catch (JsonProcessingException ex) {
 			throw new HttpMessageNotWritableException("Could not write JSON: " + ex.getMessage(), ex);
 		}

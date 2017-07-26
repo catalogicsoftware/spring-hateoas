@@ -18,6 +18,7 @@ package org.springframework.hateoas.hal.forms;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,9 +28,11 @@ import org.junit.Test;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.hateoas.AbstractJackson2MarshallingIntegrationTest;
 import org.springframework.hateoas.Link;
+import org.springframework.hateoas.Resource;
 import org.springframework.hateoas.ResourceSupport;
 import org.springframework.hateoas.Resources;
 import org.springframework.hateoas.core.AnnotationRelProvider;
+import org.springframework.hateoas.hal.SimplePojo;
 import org.springframework.hateoas.hal.forms.Jackson2HalFormsModule.HalFormsHandlerInstantiator;
 import org.springframework.hateoas.support.MappingUtils;
 
@@ -92,6 +95,27 @@ public class Jackson2HalFormsIntegrationTest extends AbstractJackson2Marshalling
 	}
 
 	@Test
+	public void rendersResource() throws Exception {
+
+		Resource<SimplePojo> resource = new Resource<SimplePojo>(new SimplePojo("test1", 1), new Link("localhost"));
+
+		assertThat(write(resource),
+			is(MappingUtils.read(new ClassPathResource("simple-resource-unwrapped.json", getClass()))));
+	}
+
+	@Test
+	public void deserializesResource() throws IOException {
+
+		Resource<SimplePojo> expected = new Resource<SimplePojo>(new SimplePojo("test1", 1), new Link("localhost"));
+
+		Resource<SimplePojo> result = mapper.readValue(
+			MappingUtils.read(new ClassPathResource("simple-resource-unwrapped.json", getClass())),
+			mapper.getTypeFactory().constructParametricType(Resource.class, SimplePojo.class));
+
+		assertThat(result, is(expected));
+	}
+
+	@Test
 	public void rendersSimpleResourcesAsEmbedded() throws Exception {
 
 		List<String> content = new ArrayList<String>();
@@ -121,6 +145,36 @@ public class Jackson2HalFormsIntegrationTest extends AbstractJackson2Marshalling
 
 		assertThat(result, is(expected));
 
+	}
+
+	@Test
+	public void rendersSingleResourceResourcesAsEmbedded() throws Exception {
+
+		List<Resource<SimplePojo>> content = new ArrayList<Resource<SimplePojo>>();
+		content.add(new Resource<SimplePojo>(new SimplePojo("test1", 1), new Link("localhost")));
+
+		Resources<Resource<SimplePojo>> resources = new Resources<Resource<SimplePojo>>(content);
+		resources.add(new Link("localhost"));
+
+		assertThat(write(resources),
+			is(MappingUtils.read(new ClassPathResource("single-embedded-resource-reference.json", getClass()))));
+	}
+
+	@Test
+	public void deserializesSingleResourceResourcesAsEmbedded() throws Exception {
+
+		List<Resource<SimplePojo>> content = new ArrayList<Resource<SimplePojo>>();
+		content.add(new Resource<SimplePojo>(new SimplePojo("test1", 1), new Link("localhost")));
+
+		Resources<Resource<SimplePojo>> expected = new Resources<Resource<SimplePojo>>(content);
+		expected.add(new Link("localhost"));
+
+		Resources<Resource<SimplePojo>> result = mapper.readValue(
+			MappingUtils.read(new ClassPathResource("single-embedded-resource-reference.json", getClass())),
+			mapper.getTypeFactory().constructParametricType(Resources.class,
+				mapper.getTypeFactory().constructParametricType(Resource.class, SimplePojo.class)));
+
+		assertThat(result, is(expected));
 	}
 
 }

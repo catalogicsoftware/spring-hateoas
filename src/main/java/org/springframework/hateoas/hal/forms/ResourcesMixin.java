@@ -15,9 +15,17 @@
  */
 package org.springframework.hateoas.hal.forms;
 
+import java.util.Collection;
+
+import javax.xml.bind.annotation.XmlElement;
+
+import org.springframework.hateoas.Resources;
 import org.springframework.hateoas.hal.forms.HalFormsDeserializers.HalFormsResourcesDeserializer;
 import org.springframework.hateoas.hal.forms.HalFormsSerializers.HalFormsResourcesSerializer;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
@@ -25,7 +33,14 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
  * @author Greg Turnquist
  */
 @JsonSerialize(using = HalFormsResourcesSerializer.class)
-@JsonDeserialize(using = HalFormsResourcesDeserializer.class)
-abstract class ResourcesMixin {
+//@JsonDeserialize(using = HalFormsResourcesDeserializer.class)
+abstract class ResourcesMixin<T> extends Resources<T> {
+
+	@Override
+	@XmlElement(name = "embedded")
+	@JsonProperty("_embedded")
+	@JsonInclude(Include.NON_EMPTY)
+	@JsonDeserialize(using = HalFormsResourcesDeserializer.class)
+	public abstract Collection<T> getContent();
 
 }
