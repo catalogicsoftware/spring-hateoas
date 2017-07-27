@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import org.springframework.core.io.ClassPathResource;
@@ -255,10 +254,19 @@ public class Jackson2HalFormsIntegrationTest extends AbstractJackson2Marshalling
 	}
 
 	@Test
-	@Ignore
 	public void serializesPagedResource() throws Exception {
 		assertThat(write(setupAnnotatedPagedResources()),
 			is(MappingUtils.read(new ClassPathResource("annotated-paged-resources.json", getClass()))));
+	}
+
+	@Test
+	public void deserializesPagedResource() throws Exception {
+		PagedResources<Resource<SimpleAnnotatedPojo>> result =
+			mapper.readValue(MappingUtils.read(new ClassPathResource("annotated-paged-resources.json", getClass())),
+				mapper.getTypeFactory().constructParametricType(PagedResources.class,
+					mapper.getTypeFactory().constructParametricType(Resource.class, SimpleAnnotatedPojo.class)));
+
+		assertThat(result, is(setupAnnotatedPagedResources()));
 	}
 
 	private static Resources<Resource<SimplePojo>> setupResources() {

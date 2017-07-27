@@ -8,8 +8,7 @@
           "href" : "localhost"
         }
       }
-    },
-    {
+    }, {
       "text" : "test2",
       "number" : 2,
       "_links" : {
@@ -28,9 +27,9 @@
     }
   },
   "page" : {
-    "size":2,
-    "totalElements":4,
-    "totalPages":2,
-    "number":0
+    "size" : 2,
+    "totalElements" : 4,
+    "totalPages" : 2,
+    "number" : 0
   }
 }

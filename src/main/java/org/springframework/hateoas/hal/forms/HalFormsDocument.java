@@ -29,6 +29,7 @@ import lombok.Data;
 import lombok.Singular;
 
 import org.springframework.hateoas.Link;
+import org.springframework.hateoas.PagedResources;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -46,7 +47,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
  */
 @Data
 @Builder(builderMethodName = "halFormsDocument")
-@JsonPropertyOrder({ "resource", "resources", "embedded", "links", "templates" })
+@JsonPropertyOrder({ "resource", "resources", "embedded", "links", "templates", "metadata" })
 //@JsonDeserialize(using = HalFormsDocumentDeserializer.class)
 public class HalFormsDocument<T> {
 
@@ -61,21 +62,27 @@ public class HalFormsDocument<T> {
 	@JsonInclude(Include.NON_NULL)
 	private Map<String, Object> embedded;
 
+	@JsonProperty("page")
+	@JsonInclude(Include.NON_NULL)
+	private PagedResources.PageMetadata pageMetadata;
+
 	@Singular private List<Link> links;
 
 	@Singular private Map<String, Template> templates;
 
-	HalFormsDocument(T resource, Collection<T> resources, Map<String, Object> embedded, List<Link> links, Map<String, Template> templates) {
+	HalFormsDocument(T resource, Collection<T> resources, Map<String, Object> embedded,
+					 PagedResources.PageMetadata pageMetadata, List<Link> links, Map<String, Template> templates) {
 
 		this.resource = resource;
 		this.resources = resources;
 		this.embedded = embedded;
+		this.pageMetadata = pageMetadata;
 		this.links = links;
 		this.templates = templates;
 	}
 
 	HalFormsDocument() {
-		this(null, null, null, new ArrayList<Link>(), new HashMap<String, Template>());
+		this(null, null, null, null, new ArrayList<Link>(), new HashMap<String, Template>());
 	}
 
 	@JsonProperty("_links")

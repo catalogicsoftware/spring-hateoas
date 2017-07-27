@@ -20,6 +20,7 @@ import static org.springframework.hateoas.hal.forms.HalFormsUtils.*;
 import java.io.IOException;
 import java.util.Map;
 
+import org.springframework.hateoas.PagedResources;
 import org.springframework.hateoas.Resource;
 import org.springframework.hateoas.Resources;
 import org.springframework.hateoas.hal.Jackson2HalModule;
@@ -108,9 +109,15 @@ public class HalFormsSerializers {
 		@Override
 		public void serialize(Resources<?> value, JsonGenerator gen, SerializerProvider provider) throws IOException {
 
-			Map<String, Object> embeddeds = embeddedMapper.map(value.getContent());
+			Map<String, Object> embeddeds = embeddedMapper.map(value);
 
-			HalFormsDocument<?> doc = toHalFormsDocument(embeddeds, value);
+			HalFormsDocument<?> doc;
+
+			if (value instanceof PagedResources) {
+				doc = toHalFormsDocument(embeddeds, value, ((PagedResources) value).getMetadata());
+			} else {
+				doc = toHalFormsDocument(embeddeds, value, null);
+			}
 
 			provider
 				.findValueSerializer(HalFormsDocument.class, property)

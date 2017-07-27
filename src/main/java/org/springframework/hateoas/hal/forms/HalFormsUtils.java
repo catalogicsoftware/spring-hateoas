@@ -30,6 +30,7 @@ import java.util.Set;
 
 import org.springframework.hateoas.Affordance;
 import org.springframework.hateoas.Link;
+import org.springframework.hateoas.PagedResources;
 import org.springframework.hateoas.Resource;
 import org.springframework.hateoas.ResourceSupport;
 import org.springframework.hateoas.Resources;
@@ -49,10 +50,12 @@ final class HalFormsUtils {
 			.build();
 	}
 
-	public static <T> HalFormsDocument<T> toHalFormsDocument(Map<String, Object> embeddeds, Resources<T> resources) {
+	public static <T> HalFormsDocument<T> toHalFormsDocument(Map<String, Object> embeddeds, Resources<T> resources,
+															 PagedResources.PageMetadata metadata) {
 
 		return HalFormsDocument.<T>halFormsDocument()
 			.embedded(embeddeds)
+			.pageMetadata(metadata)
 			.links(resources.getLinks())
 			.templates(findTemplates(resources))
 			.build();

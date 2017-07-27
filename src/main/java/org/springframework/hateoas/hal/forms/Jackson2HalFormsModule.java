@@ -20,6 +20,7 @@ import java.util.Map;
 
 import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.hateoas.Link;
+import org.springframework.hateoas.PagedResources;
 import org.springframework.hateoas.RelProvider;
 import org.springframework.hateoas.Resource;
 import org.springframework.hateoas.ResourceSupport;
@@ -62,6 +63,7 @@ public class Jackson2HalFormsModule extends SimpleModule {
 		setMixInAnnotation(ResourceSupport.class, ResourceSupportMixin.class);
 		setMixInAnnotation(Resource.class, ResourceMixin.class);
 		setMixInAnnotation(Resources.class, ResourcesMixin.class);
+		setMixInAnnotation(PagedResources.class, PagedResourcesMixin.class);
 	}
 
 	/**
