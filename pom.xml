@@ -2,9 +2,9 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
-	<groupId>org.springframework.hateoas</groupId>
-	<artifactId>spring-hateoas</artifactId>
-	<version>0.24.0.BUILD-SNAPSHOT</version>
+	<groupId>com.syncsort.org.springframework.hateoas</groupId>
+	<artifactId>spring-hateoas-syncsort</artifactId>
+	<version>0.24</version>
 
 	<name>Spring HATEOAS</name>
 	<url>http://github.com/SpringSource/spring-hateoas</url>

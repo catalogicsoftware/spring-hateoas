@@ -73,6 +73,9 @@ public class Link implements Serializable {
 	private @XmlAttribute @Wither String type;
 	private @XmlAttribute @Wither String deprecation;
 	private @XmlTransient @JsonIgnore UriTemplate template;
+	@XmlAttribute
+	private boolean templated = false;
+
 
 	/**
 	 * Creates a new link to the given URI with the self rel.
@@ -82,6 +85,18 @@ public class Link implements Serializable {
 	 */
 	public Link(String href) {
 		this(href, REL_SELF);
+	}
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+	public boolean isTemplated() {
+		return templated;
+	}
+
+	public void setTemplated(boolean templated) {
+		this.templated = templated;
 	}
 
 	/**
@@ -144,9 +159,11 @@ public class Link implements Serializable {
 	 * 
 	 * @return
 	 */
+    /*
 	public boolean isTemplated() {
 		return !getUriTemplate().getVariables().isEmpty();
 	}
+    */
 
 	/**
 	 * Turns the current template into a {@link Link} by expanding it using the given parameters.
